@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#eef1ef">
+
+    <title>Gym Desk - Member Access</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #eef1ef;
+            --card: #fff;
+            --ink: #14211f;
+            --mut: #5d6b68;
+            --line: #d3dad7;
+            --pri: #1f5c4d;
+            --onpri: #fff;
+            --tape: #f2c230;
+            --bad: #b3261e;
+            --ok: #1f7a4d;
+            box-sizing: border-box;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #121917;
+                --card: #1b2522;
+                --ink: #e8efed;
+                --mut: #93a39f;
+                --line: #2e3b37;
+                --pri: #4fb597;
+                --onpri: #0c1412;
+                --bad: #ff8a80;
+                --ok: #6fd6a0;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            font: 16px/1.45 Barlow, system-ui, sans-serif;
+        }
+
+        main {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        h1, h2 {
+            font-family: "Barlow Condensed", Impact, sans-serif;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 36px;
+            border-bottom: 6px solid var(--tape);
+            display: inline-block;
+            padding-bottom: 2px;
+        }
+
+        h2 {
+            font-size: 23px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--mut);
+            margin: 10px 0 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: var(--mut);
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--ink);
+            font: inherit;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .btn {
+            padding: 12px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--pri);
+            color: var(--onpri);
+            font: 600 16px Barlow, sans-serif;
+            cursor: pointer;
+        }
+
+        .btn.alt {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--line);
+        }
+
+        button:focus-visible, input:focus-visible {
+            outline: 3px solid var(--tape);
+            outline-offset: 2px;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .message {
+            margin-top: 16px;
+            min-height: 1.4em;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+        .ok {
+            color: var(--ok);
+        }
+
+        .bad {
+            color: var(--bad);
+        }
+
+        .hint {
+            color: var(--mut);
+            font-size: 14px;
+            margin: 14px 0 0;
+        }
+
+        @media (max-width: 360px) {
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>GYM DESK</h1>
+        <p class="subtitle">Member access · Check in and check out</p>
+
+        <section class="card">
+            <h2>Member Access</h2>
+            <p class="subtitle">
+                Enter the phone number registered with your gym membership.
+            </p>
+
+            <form id="accessForm">
+                <label for="phone">Registered phone number</label>
+                <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    placeholder="e.g. 08012345678"
+                    autocomplete="tel"
+                    required
+                >
+
+                <div class="actions">
+                    <button class="btn" id="checkinBtn" type="button">
+                        Check In
+                    </button>
+
+                    <button class="btn alt" id="checkoutBtn" type="button">
+                        Check Out
+                    </button>
+                </div>
+            </form>
+
+            <div id="result" class="message" role="status" aria-live="polite"></div>
+
+            <p class="hint">
+                Use your registered number. Access is subject to membership status.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        const phoneInput = document.getElementById("phone");
+        const result = document.getElementById("result");
+        const checkinBtn = document.getElementById("checkinBtn");
+        const checkoutBtn = document.getElementById("checkoutBtn");
+
+        async function submitAccess(action) {
+            const phone = phoneInput.value.trim();
+
+            if (!phone) {
+                result.textContent = "Please enter your registered phone number.";
+                result.className = "message bad";
+                phoneInput.focus();
+                return;
+            }
+
+            checkinBtn.disabled = true;
+            checkoutBtn.disabled = true;
+            result.textContent = "Processing...";
+            result.className = "message";
+
+            try {
+                const response = await fetch(`/api/${action}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                const data = await response.json();
+
+                result.textContent = data.message || "Request completed.";
+                result.className = "message " +
+                    (action === "checkin"
+                        ? (data.allowed ? "ok" : "bad")
+                        : (data.success ? "ok" : "bad"));
+
+            } catch (error) {
+                result.textContent = "Unable to connect. Please try again.";
+                result.className = "message bad";
+            } finally {
+                checkinBtn.disabled = false;
+                checkoutBtn.disabled = false;
+            }
+        }
+
+        checkinBtn.addEventListener("click", function () {
+            submitAccess("checkin");
+        });
+
+        checkoutBtn.addEventListener("click", function () {
+            submitAccess("checkout");
+        });
+
+        document.getElementById("accessForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            submitAccess("checkin");
+        });
+    </script>
+</body>
+</html>
