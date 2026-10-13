@@ -179,27 +179,26 @@
                 Enter the phone number registered with your gym membership.
             </p>
 
-            <form id="accessForm">
-                <label for="phone">Registered phone number</label>
-                <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    placeholder="e.g. 08012345678"
-                    autocomplete="tel"
-                    required
-                >
+<form id="accessForm">
+    <label for="phone">Registered phone number</label>
 
-                <div class="actions">
-                    <button class="btn" id="checkinBtn" type="button">
-                        Check In
-                    </button>
+    <input
+        type="tel"
+        id="phone"
+        name="phone"
+        placeholder="e.g. 08012345678"
+        autocomplete="tel"
+        required
+    >
 
-                    <button class="btn alt" id="checkoutBtn" type="button">
-                        Check Out
-                    </button>
-                </div>
-            </form>
+    <div class="actions">
+        <button class="btn" id="submitBtn" type="submit">
+            Check In / Check Out
+        </button>
+    </div>
+</form>
+
+
 
             <div id="result" class="message" role="status" aria-live="polite"></div>
 
@@ -209,65 +208,58 @@
         </section>
     </main>
 
-    <script>
-        const phoneInput = document.getElementById("phone");
-        const result = document.getElementById("result");
-        const checkinBtn = document.getElementById("checkinBtn");
-        const checkoutBtn = document.getElementById("checkoutBtn");
+<script>
+const accessForm = document.getElementById("accessForm");
+const phoneInput = document.getElementById("phone");
+const submitBtn = document.getElementById("submitBtn");
+const result = document.getElementById("result");
 
-        async function submitAccess(action) {
-            const phone = phoneInput.value.trim();
+accessForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-            if (!phone) {
-                result.textContent = "Please enter your registered phone number.";
-                result.className = "message bad";
-                phoneInput.focus();
-                return;
-            }
+    const phone = phoneInput.value.trim();
 
-            checkinBtn.disabled = true;
-            checkoutBtn.disabled = true;
-            result.textContent = "Processing...";
-            result.className = "message";
+    if (!phone) {
+        result.textContent = "Please enter your registered phone number.";
+        result.className = "message bad";
+        return;
+    }
 
-            try {
-                const response = await fetch(`/api/${action}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ phone: phone })
-                });
+    submitBtn.disabled = true;
+    result.textContent = "Processing...";
+    result.className = "message";
 
-                const data = await response.json();
+    try {
+        const response = await fetch("/api/checkin", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                phone: phone
+            })
+        });
 
-                result.textContent = data.message || "Request completed.";
-                result.className = "message " +
-                    (action === "checkin"
-                        ? (data.allowed ? "ok" : "bad")
-                        : (data.success ? "ok" : "bad"));
+        const data = await response.json();
 
-            } catch (error) {
-                result.textContent = "Unable to connect. Please try again.";
-                result.className = "message bad";
-            } finally {
-                checkinBtn.disabled = false;
-                checkoutBtn.disabled = false;
-            }
+        result.textContent = data.message || "Request completed.";
+        result.className = "message " +
+            (data.allowed ? "ok" : "bad");
+
+        if (data.allowed) {
+            phoneInput.value = "";
         }
 
-        checkinBtn.addEventListener("click", function () {
-            submitAccess("checkin");
-        });
+    } catch (error) {
+        result.textContent =
+            "Unable to connect. Please try again.";
+        result.className = "message bad";
 
-        checkoutBtn.addEventListener("click", function () {
-            submitAccess("checkout");
-        });
+    } finally {
+        submitBtn.disabled = false;
+    }
+});
+</script>
 
-        document.getElementById("accessForm").addEventListener("submit", function (event) {
-            event.preventDefault();
-            submitAccess("checkin");
-        });
-    </script>
 </body>
 </html>

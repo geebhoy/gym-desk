@@ -3,9 +3,19 @@ from flask import Flask, render_template, request
 import sqlite3
 import time
 import uuid
+import os
+from pathlib import Path
+from database.db import initialize_database
+
 
 app = Flask(__name__)
 
+DATABASE_PATH = os.environ.get(
+    "DATABASE_PATH",
+    str(Path(__file__).resolve().parent / "database" / "gym_desk.db")
+)
+
+initialize_database()
 
 @app.route("/")
 def home():
@@ -24,7 +34,7 @@ def test_api():
 
 @app.route("/api/members")
 def get_members():
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     members = connection.execute(
@@ -39,7 +49,7 @@ def get_members():
 def add_member():
     data = request.get_json()
 
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     connection.execute(
         """
@@ -64,7 +74,7 @@ def add_member():
 
 @app.route("/api/data")
 def get_all_data():
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     members = [
@@ -124,7 +134,7 @@ def save_all_data():
         if not isinstance(data.get(key), list):
             return {"error": f"{key} must be a list"}, 400
 
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     try:
         connection.execute("BEGIN")
@@ -224,7 +234,7 @@ def self_service_checkin():
 
     phone = phone.strip()
 
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     try:
@@ -248,14 +258,26 @@ def self_service_checkin():
             }, 403
 
         visit = connection.execute(
-            "SELECT id FROM visits WHERE mid = ? AND check_out IS NULL LIMIT 1",
+            """
+            SELECT id FROM visits
+            WHERE mid = ? AND check_out IS NULL
+            ORDER BY check_in DESC
+            LIMIT 1
+            """,
             (member["id"],)
         ).fetchone()
 
         if visit:
+            connection.execute(
+                "UPDATE visits SET check_out = ? WHERE id = ?",
+                (int(time.time() * 1000), visit["id"])
+            )
+            connection.commit()
+
             return {
                 "allowed": True,
-                "message": f"ACCESS GRANTED — {member['name']}, you are already checked in."
+                "action": "checkout",
+                "message": f"CHECKOUT SUCCESSFUL — goodbye, {member['name']}!"
             }
 
         connection.execute(
@@ -269,11 +291,11 @@ def self_service_checkin():
                 int(time.time() * 1000)
             )
         )
-
         connection.commit()
 
         return {
             "allowed": True,
+            "action": "checkin",
             "message": f"ACCESS GRANTED — welcome, {member['name']}!"
         }
 
@@ -281,12 +303,11 @@ def self_service_checkin():
         connection.rollback()
         return {
             "allowed": False,
-            "message": "Unable to complete check-in. Please try again."
+            "message": "Unable to complete your request. Please try again."
         }, 500
 
     finally:
         connection.close()
-
 
 @app.route("/api/checkout", methods=["POST"])
 def self_service_checkout():
@@ -301,7 +322,7 @@ def self_service_checkout():
 
     phone = phone.strip()
 
-    connection = sqlite3.connect("database/gym_desk.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     try:

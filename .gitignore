@@ -21,3 +21,9 @@ __pycache__/
 .idea/
 .DS_Store
 __pycache__/
+# Local backup files
+app_before_*.py
+templates/*_backup.html
+
+# Locally generated QR code
+gym_entrance_qr.png
